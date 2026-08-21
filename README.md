@@ -1,75 +1,70 @@
-# ⚡ Hackquire — AI-Powered Invoicing for Independent Workers
+# Hackquire — AI-Powered Invoicing for Independent Workers
 
-> **Turn your work into an invoice in seconds.**
-> AI-powered invoicing built for gig economy workers (electricians, tutors, tailors, freelancers, and service providers).
+Turn your work into an invoice in seconds. Hackquire is an AI-powered invoicing tool built for gig economy workers — electricians, tutors, tailors, freelancers, and other service providers who need to send professional invoices fast without wrestling with spreadsheets.
 
----
+## Core Features
 
-## 🌟 Core Features
+### AI Invoice Generator (Biddable / Integrable Service)
 
-### 1. ⭐ AI Invoice Generator (Biddable / Integrable Service)
-- **Natural Language Parsing**: Enter plain speech/text like:
-  > *"Repaired Rahul's AC for ₹2500 and replaced the filter for ₹600. Payment due in 7 days."*
-- Powered by **Google Gemini API** with an automatic heuristic fallback engine.
-- Extracts **Client Name**, **Line Items**, **Quantities**, **Unit Rates**, **Due Dates**, and **Notes**.
-- Calculates subtotal, tax rate, discounts, and grand totals on the backend.
-- Professional invoice generation with **one-click PDF download**.
-- **Reusable API**: Available via `POST /api/ai/invoice` for other teams to integrate into their workflows!
+Just type or speak plain language, like:
 
-### 2. 💳 UPI Reconciliation
-- Simple, intuitive transaction matching interface.
-- Match incoming UPI payments to pending invoices with one click.
-- Automatic balance calculation (`amountPaid`, `amountDue`, `paid`/`partial`/`overdue` status).
-- Supports manual unmatching and dispute review.
+> "Repaired Rahul's AC for ₹2500 and replaced the filter for ₹600. Payment due in 7 days."
 
-### 3. 🔔 Due Reminders & One-Click Notifications
-- Real-time tracking of overdue and upcoming due invoices.
-- **1-Click WhatsApp Reminder**: Opens pre-formatted WhatsApp message with invoice number, amount, and client name.
-- **1-Click SMS Reminder**: Opens default SMS messaging with polite payment reminder.
+and Hackquire turns it into a full invoice. It's powered by the Google Gemini API, with a heuristic fallback engine that kicks in automatically if Gemini is unavailable.
 
----
+The parser pulls out the client name, line items, quantities, unit rates, due dates, and any notes, then handles subtotal, tax, discounts, and grand total calculations on the backend. Once it's generated, invoices can be downloaded as a polished PDF with one click.
 
-## 🛠️ Tech Stack
+This is also exposed as a reusable API — `POST /api/ai/invoice` — so other teams can plug invoice generation into their own workflows.
 
-- **Frontend**: React 18 + Vite + Tailwind CSS + Lucide Icons + React Hot Toast + jsPDF
-- **Backend**: Node.js + Express.js + RESTful Controllers + JWT Authentication + bcryptjs
-- **Database**: MongoDB Atlas + Mongoose ODM (with seamless in-memory fallback)
+### UPI Reconciliation
+
+A simple interface for matching incoming UPI payments to pending invoices. Match with one click, and the app automatically calculates `amountPaid`, `amountDue`, and status (`paid`, `partial`, or `overdue`). Manual unmatching and dispute review are supported too, for when something doesn't line up.
+
+### Due Reminders & One-Click Notifications
+
+Real-time tracking of upcoming and overdue invoices, plus:
+
+- **One-click WhatsApp reminder** — opens a pre-formatted message with the invoice number, amount, and client name
+- **One-click SMS reminder** — opens your default messaging app with a polite payment nudge
+
+## Tech Stack
+
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons, React Hot Toast, jsPDF
+- **Backend**: Node.js, Express.js, RESTful controllers, JWT authentication, bcryptjs
+- **Database**: MongoDB Atlas with Mongoose ODM (falls back to in-memory storage seamlessly)
 - **AI Engine**: Google Gemini Generative AI SDK (`@google/generative-ai`)
 
----
+## Quick Start (Local Development)
 
-## 🚀 Quick Start (Local Development)
-
-### 1. Backend Setup
+### 1. Backend
 
 ```bash
 cd backend
 npm install
 npm run dev
 ```
-*Backend runs on `http://localhost:5000`*
 
-### 2. Frontend Setup
+Runs on `http://localhost:5000`.
+
+### 2. Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*Frontend runs on `http://localhost:5173`*
 
----
+Runs on `http://localhost:5173`.
 
-## 🔑 Demo Account (Pre-Seeded)
+## Demo Account (Pre-Seeded)
 
 - **Email**: `demo@hackquire.com`
 - **Password**: `demo123`
 
----
-
-## 🌐 Environment Variables
+## Environment Variables
 
 ### Backend (`backend/.env`)
+
 ```env
 MONGO_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/hackquire?retryWrites=true&w=majority
 JWT_SECRET=hackquire_jwt_super_secret_2026_change_in_production
@@ -80,25 +75,26 @@ NODE_ENV=development
 ```
 
 ### Frontend (`frontend/.env`)
+
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
----
+## Deployment Guide
 
-## 🚢 Deployment Guide
+### Backend (Render / Railway / Heroku)
 
-### Deploying Backend (Render / Railway / Heroku)
-1. Push repository to GitHub.
-2. Create a new **Web Service** on [Render](https://render.com).
-3. Set **Root Directory** to `backend`.
-4. Set **Build Command** to `npm install`.
-5. Set **Start Command** to `node server.js`.
-6. Add Environment Variables: `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `CLIENT_URL` (your frontend URL), `NODE_ENV=production`.
+1. Push the repository to GitHub.
+2. Create a new Web Service on [Render](https://render.com).
+3. Set the root directory to `backend`.
+4. Set the build command to `npm install`.
+5. Set the start command to `node server.js`.
+6. Add the environment variables: `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `CLIENT_URL` (your frontend URL), and `NODE_ENV=production`.
 
-### Deploying Frontend (Vercel / Netlify)
-1. Create a new Project on [Vercel](https://vercel.com).
-2. Set **Root Directory** to `frontend`.
-3. Set **Build Command** to `npm run build`.
-4. Set **Output Directory** to `dist`.
-5. Add Environment Variable: `VITE_API_URL=https://your-backend.onrender.com/api`.
+### Frontend (Vercel / Netlify)
+
+1. Create a new project on [Vercel](https://vercel.com).
+2. Set the root directory to `frontend`.
+3. Set the build command to `npm run build`.
+4. Set the output directory to `dist`.
+5. Add the environment variable `VITE_API_URL=https://your-backend.onrender.com/api`.
