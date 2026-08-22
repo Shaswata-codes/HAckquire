@@ -8,7 +8,13 @@ try {
   console.warn('Could not set custom DNS servers:', e.message);
 }
 
+let isConnected = false;
+
 const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    return;
+  }
+
   let uri = process.env.MONGO_URI;
 
   try {
@@ -18,6 +24,7 @@ const connectDB = async () => {
 
     console.log('Connecting to MongoDB Atlas...');
     const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+    isConnected = true;
     console.log(`✅ MongoDB Atlas Connected: ${conn.connection.host}`);
 
     // Auto-seed initial demo user and data if empty
@@ -29,20 +36,27 @@ const connectDB = async () => {
       await seedData();
     }
   } catch (error) {
-    console.warn(`⚠️ Atlas connection failed (${error.message}). Falling back to in-memory database...`);
-    try {
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
-      const memUri = mongod.getUri();
-      const conn = await mongoose.connect(memUri);
-      console.log(`✨ In-Memory MongoDB Connected: ${conn.connection.host}`);
+    console.warn(`⚠️ Atlas connection failed (${error.message}).`);
+    
+    // In-memory MongoDB only in local development, not on Vercel/production
+    if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+      try {
+        const { MongoMemoryServer } = require('mongodb-memory-server');
+        const mongod = await MongoMemoryServer.create();
+        const memUri = mongod.getUri();
+        const conn = await mongoose.connect(memUri);
+        isConnected = true;
+        console.log(`✨ In-Memory MongoDB Connected: ${conn.connection.host}`);
 
-      // Seed in-memory DB immediately
-      const seedData = require('../seed/seedData');
-      await seedData();
-      console.log('✅ Demo account ready: demo@hackquire.com / demo123');
-    } catch (memErr) {
-      console.error('CRITICAL: Failed to initialize in-memory database:', memErr.message);
+        // Seed in-memory DB immediately
+        const seedData = require('../seed/seedData');
+        await seedData();
+        console.log('✅ Demo account ready: demo@hackquire.com / demo123');
+      } catch (memErr) {
+        console.error('CRITICAL: Failed to initialize in-memory database:', memErr.message);
+      }
+    } else {
+      console.error('CRITICAL: MongoDB connection failed in production/serverless environment. Please ensure MONGO_URI environment variable is properly configured.');
     }
   }
 };

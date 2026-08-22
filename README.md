@@ -82,19 +82,32 @@ VITE_API_URL=http://localhost:5000/api
 
 ## Deployment Guide
 
-### Backend (Render / Railway / Heroku)
+### Option 1: Full-Stack on Vercel (Recommended - Single Project)
 
-1. Push the repository to GitHub.
-2. Create a new Web Service on [Render](https://render.com).
-3. Set the root directory to `backend`.
-4. Set the build command to `npm install`.
-5. Set the start command to `node server.js`.
-6. Add the environment variables: `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `CLIENT_URL` (your frontend URL), and `NODE_ENV=production`.
+1. Push this repository to GitHub.
+2. Go to [Vercel Dashboard](https://vercel.com/dashboard) and click **"Add New" > "Project"**.
+3. Import your GitHub repository.
+4. Keep the **Root Directory** as `./` (default).
+5. In **Environment Variables**, configure:
+   - `MONGO_URI`: Your MongoDB Atlas connection string (`mongodb+srv://...`)
+   - `JWT_SECRET`: A secure random secret string
+   - `GEMINI_API_KEY`: Your Google Gemini API Key
+   - `NODE_ENV`: `production`
+6. Click **Deploy**. Vercel will automatically build the React frontend and deploy the Express API as Serverless Functions (`/api/*`).
 
-### Frontend (Vercel / Netlify)
+---
 
+### Option 2: Frontend on Vercel + Backend on Render/Railway
+
+#### Backend (Render / Railway)
+1. Create a new Web Service on [Render](https://render.com) or [Railway](https://railway.app).
+2. Set the root directory to `backend`.
+3. Set the build command to `npm install` and start command to `node server.js`.
+4. Set environment variables: `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `CLIENT_URL` (your frontend Vercel URL), and `NODE_ENV=production`.
+
+#### Frontend (Vercel)
 1. Create a new project on [Vercel](https://vercel.com).
 2. Set the root directory to `frontend`.
-3. Set the build command to `npm run build`.
-4. Set the output directory to `dist`.
-5. Add the environment variable `VITE_API_URL=https://your-backend.onrender.com/api`.
+3. Framework Preset: **Vite**.
+4. Set the environment variable: `VITE_API_URL=https://your-backend.onrender.com/api`.
+5. Click **Deploy**. (The included `frontend/vercel.json` ensures SPA routes like `/dashboard` work seamlessly on page reload).
