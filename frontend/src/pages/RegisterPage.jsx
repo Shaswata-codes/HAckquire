@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Zap, Mail, Lock, User, Briefcase, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import GoogleLoginButton from '../components/auth/GoogleLoginButton';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', businessName: '' });
@@ -47,6 +48,18 @@ export default function RegisterPage() {
         </div>
 
         <div className="glass-card p-6 sm:p-8">
+          {/* Google Sign up */}
+          <div className="mb-5">
+            <GoogleLoginButton text="Sign up with Google" mode="signup" />
+          </div>
+
+          <div className="relative flex items-center justify-center mb-5">
+            <div className="border-t border-slate-700/80 w-full"></div>
+            <span className="bg-slate-900/90 px-3 text-[11px] font-semibold tracking-wider text-slate-500 uppercase absolute">
+              Or with email
+            </span>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Full Name</label>

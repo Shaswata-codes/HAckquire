@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hackquire — Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #030712;
+      color: #f8fafc;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Presentation Container */
+    .deck-container {
+      width: 100%;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 60%, #030712 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(99, 102, 241, 0.15);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 44px 56px;
+    }
+
+    /* Slide Elements */
+    .slide {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: #22d3ee;
+      margin-bottom: 10px;
+    }
+
+    .slide-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: #ffffff;
+      line-height: 1.15;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .slide-subtitle {
+      font-size: 16px;
+      color: #94a3b8;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    /* Grid Layouts */
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* Cards */
+    .card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .card.highlight {
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(30, 27, 75, 0.4);
+    }
+
+    .card.emerald {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(6, 78, 59, 0.2);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      font-weight: 600;
+      color: #38bdf8;
+      margin-bottom: 12px;
+    }
+
+    .card ul {
+      list-style: none;
+      space-y: 8px;
+    }
+
+    .card li {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 8px;
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .card li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #6366f1;
+      font-weight: bold;
+    }
+
+    /* Slide 1 Specifics */
+    .hero-banner {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin: 16px 0 24px 0;
+    }
+
+    .hero-banner p {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .hero-banner strong {
+      color: #34d399;
+    }
+
+    /* Navigation Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1280px;
+      margin-top: 18px;
+      padding: 0 10px;
+    }
+
+    .nav-btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: rgba(99, 102, 241, 0.3);
+      border-color: #6366f1;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .indicators {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 32px;
+      height: 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .dot.active {
+      background: #6366f1;
+      width: 48px;
+    }
+
+    .print-btn {
+      background: #4f46e5;
+      border-color: #6366f1;
+    }
+    
+    .print-btn:hover {
+      background: #4338ca;
+    }
+
+    @media print {
+      body {
+        background: none;
+      }
+      .controls {
+        display: none;
+      }
+      .deck-container {
+        box-shadow: none;
+        border: none;
+        max-width: 100%;
+        page-break-after: always;
+      }
+      .slide {
+        display: flex !important;
+        page-break-after: always;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container" id="presentation">
+    
+    <!-- ======================================================= -->
+    <!-- SLIDE 1: TEAM & PROJECT OVERVIEW -->
+    <!-- ======================================================= -->
+    <div class="slide active" id="slide-1">
+      <div>
+        <div class="badge-tag">HACKATHON 2026 • FINTECH & AI AUTOMATION</div>
+        <h1 class="slide-title">HACKQUIRE</h1>
+        <p class="slide-subtitle gradient-text">AI-Powered Vernacular Invoicing & Automated Financial Operations for the Gig Economy</p>
+
+        <div class="hero-banner">
+          <p>
+            <strong>🎯 Core Problem & Solution:</strong> Informal workers, tutors, tailors, technicians, and freelancers lose hours wrestling with invoices and chasing overdue payments. <strong>Hackquire</strong> turns plain vernacular voice/text into GST-ready invoices in 3 seconds and accelerates payment collection by 3x with automated UPI reconciliation and WhatsApp reminders.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 10px;">
+          Project Team & Roles
+        </div>
+        <div class="grid-4">
+          <div class="card highlight">
+            <div class="card-title">Shaswata Sarkar</div>
+            <div class="card-meta">ID: 24155125</div>
+            <p style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">Team Lead & Full-Stack Architect</p>
+            <p style="font-size: 10.5px; color: #94a3b8; margin-top: 4px;">System architecture, AI pipeline & cloud deployment.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Soham Chakraborty</div>
+            <div class="card-meta" style="color: #22d3ee;">ID: 24155502</div>
+            <p style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">Backend & AI Systems</p>
+            <p style="font-size: 10.5px; color: #94a3b8; margin-top: 4px;">Gemini NLP extraction & vernacular translation logic.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Tanima Maity</div>
+            <div class="card-meta" style="color: #34d399;">ID: 2455138</div>
+            <p style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">Frontend & UI/UX Specialist</p>
+            <p style="font-size: 10.5px; color: #94a3b8; margin-top: 4px;">High-conversion responsive web app & PDF design.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Soumyadip Jana</div>
+            <div class="card-meta" style="color: #fbbf24;">ID: 24155130</div>
+            <p style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">Integration & QA Engineer</p>
+            <p style="font-size: 10.5px; color: #94a3b8; margin-top: 4px;">API integration, test cases & cross-browser verification.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- SLIDE 2: PROTOTYPE PART 1 (AI & INDIC INTELLIGENCE) -->
+    <!-- ======================================================= -->
+    <div class="slide" id="slide-2">
+      <div>
+        <div class="badge-tag">PROTOTYPE ARCHITECTURE • PART 1</div>
+        <h1 class="slide-title">Multilingual AI Invoicing & Indic Intelligence</h1>
+        <p class="slide-subtitle">From unstructured speech to GST-ready billing across 10+ Indian regional languages</p>
+      </div>
+
+      <div class="grid-3" style="margin-top: 10px;">
+        <div class="card highlight">
+          <div class="card-title">🎙️ Multilingual AI Parser</div>
+          <div class="card-meta">Gemini 1.5 Flash + Indic Heuristics</div>
+          <ul>
+            <li>Understands natural language in <strong>Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati & Hinglish</strong>.</li>
+            <li>Auto-extracts client names, line items, quantities, rates, and due dates.</li>
+            <li><strong>Live Example:</strong> <em>"প্রিয়ার অঙ্ক টিউশন ১০ টি ক্লাস ৫০০ টাকা"</em> ➔ Priya, 10 Classes @ ₹500, Total ₹5,000.</li>
+            <li>100% resilient with instant offline heuristic fallback engine.</li>
+          </ul>
+        </div>
+
+        <div class="card emerald">
+          <div class="card-title">📄 High-Fidelity PDF Engine</div>
+          <div class="card-meta" style="color: #34d399;">Client-Side Retina Rendering</div>
+          <ul>
+            <li>Instant client-side generation without server roundtrip latency.</li>
+            <li>Full Unicode & Indic font support (Bengali, Devanagari, Tamil, Telugu & ₹ currency symbol).</li>
+            <li>Automatic calculations of Subtotal, GST/Tax, and custom Discounts.</li>
+            <li>One-click professional branded PDF download.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔐 Identity & Sandbox</div>
+          <div class="card-meta">Google OAuth 2.0 + Instant Demo</div>
+          <ul>
+            <li>Native <strong>Sign in with Google</strong> popup with device account chooser.</li>
+            <li>Instant 1-click sandbox demo (<code>demo@hackquire.com</code>) for rapid hackathon testing.</li>
+            <li>Encrypted JWT authentication with secure session management.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: #94a3b8; text-align: right;">
+        Production Live on Vercel: <span style="color: #38bdf8;">hackquire.vercel.app</span>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- SLIDE 3: PROTOTYPE PART 2 (FINANCIAL AUTOMATION) -->
+    <!-- ======================================================= -->
+    <div class="slide" id="slide-3">
+      <div>
+        <div class="badge-tag">PROTOTYPE ARCHITECTURE • PART 2</div>
+        <h1 class="slide-title">Payment Automation, UPI & Reminders</h1>
+        <p class="slide-subtitle">Eliminating payment chase and manual spreadsheet reconciliation</p>
+      </div>
+
+      <div class="grid-3" style="margin-top: 10px;">
+        <div class="card emerald">
+          <div class="card-title">⚡ UPI Reconciliation</div>
+          <div class="card-meta" style="color: #34d399;">1-Click Transaction Matching</div>
+          <ul>
+            <li>Matches incoming UPI transaction IDs (GPay, PhonePe, Paytm) directly to open invoices.</li>
+            <li>Automatically calculates <code>amountPaid</code>, <code>amountDue</code>, and updates status (Paid/Partial/Overdue).</li>
+            <li>Dispute review and manual unmatch support for irregular payments.</li>
+          </ul>
+        </div>
+
+        <div class="card highlight">
+          <div class="card-title">📲 Smart Due Reminders</div>
+          <div class="card-meta">1-Click WhatsApp & SMS Dispatch</div>
+          <ul>
+            <li>Real-time tracking of upcoming and overdue payment deadlines.</li>
+            <li>Generates polite, pre-formatted WhatsApp reminders with invoice number and exact amount due.</li>
+            <li>Native SMS nudges to get freelancers paid 3x faster without awkward phone calls.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🌐 Reusable B2B Microservice</div>
+          <div class="card-meta" style="color: #fbbf24;">Exportable Marketplace API</div>
+          <ul>
+            <li>Exposed modular endpoint <code>POST /api/ai/invoice</code> for third-party platforms to plug in.</li>
+            <li>Regional translation API <code>POST /api/ai/translate</code> supporting 10+ languages.</li>
+            <li>Serverless full-stack architecture with single-domain CORS-free deployment.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: #94a3b8; text-align: right;">
+        Status: <span style="color: #34d399;">● Full-Stack Serverless Live</span>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- SLIDE 4: TRADABLE ASSET ECONOMY (BUY & SELL) -->
+    <!-- ======================================================= -->
+    <div class="slide" id="slide-4">
+      <div>
+        <div class="badge-tag">HACKATHON MARKETPLACE • BUY & SELL ECONOMY</div>
+        <h1 class="slide-title">Tradable Asset Portfolio & Marketplace Value</h1>
+        <p class="slide-subtitle">Monetization through API sales and strategic ecosystem acquisitions</p>
+      </div>
+
+      <div class="grid-2" style="margin-top: 10px;">
+        <!-- ASSETS SOLD -->
+        <div class="card emerald">
+          <div class="card-title" style="color: #34d399;">
+            💰 ASSETS SOLD (Monetized Services)
+          </div>
+          <div class="card-meta" style="color: #6ee7b7;">Revenue & Microservice Exports</div>
+          
+          <div style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #10b981;">
+            <div style="font-size: 13px; font-weight: 700; color: #ffffff;">
+              1. AI Invoice Generator API <span style="background: #10b981; color: #000; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 6px;">SOLD 2x</span>
+            </div>
+            <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+              Exposed <code>POST /api/ai/invoice</code> to external teams for converting unstructured text into structured bills.
+            </div>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #22d3ee;">
+            <div style="font-size: 13px; font-weight: 700; color: #ffffff;">
+              2. WhatsApp & SMS Due Reminder Engine <span style="background: #22d3ee; color: #000; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 6px;">SOLD 1x</span>
+            </div>
+            <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+              Exported our automated payment nudge & notification dispatcher service for client follow-ups.
+            </div>
+          </div>
+        </div>
+
+        <!-- ASSETS BOUGHT -->
+        <div class="card highlight">
+          <div class="card-title" style="color: #818cf8;">
+            📥 ASSETS BOUGHT & INTEGRATED
+          </div>
+          <div class="card-meta" style="color: #a5b4fc;">Ecosystem Capability Expansion</div>
+          
+          <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+            <div style="font-size: 12px; color: #e2e8f0; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: #38bdf8;">1. OCR + ReCorrect Engine (SAHAYAK AI):</strong> Document text scanning, auto-field extraction & quality check.
+            </div>
+            <div style="font-size: 12px; color: #e2e8f0; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: #38bdf8;">2. LedgerFlow App (Next.js):</strong> High-performance financial ledger architecture and UI foundation.
+            </div>
+            <div style="font-size: 12px; color: #e2e8f0; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: #38bdf8;">3. Vernacular Wrapper (Module C):</strong> 10-language regional translation & phonetic transliteration layer.
+            </div>
+            <div style="font-size: 12px; color: #e2e8f0; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+              <strong style="color: #38bdf8;">4. Tech-Tide Energy Backend Engine:</strong> Slab-based billing calculations, anomaly detection & alert simulator.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: #94a3b8; text-align: center;">
+        Platform Synergy: Combining proprietary Indic AI with modular marketplace extensions for maximum ROI.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Navigation Controls -->
+  <div class="controls">
+    <button class="nav-btn" id="prev-btn" onclick="prevSlide()" disabled>
+      ← Previous
+    </button>
+
+    <div class="indicators">
+      <div class="dot active" onclick="goToSlide(0)"></div>
+      <div class="dot" onclick="goToSlide(1)"></div>
+      <div class="dot" onclick="goToSlide(2)"></div>
+      <div class="dot" onclick="goToSlide(3)"></div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <button class="nav-btn print-btn" onclick="window.print()">
+        🖨️ Print / Save as PDF
+      </button>
+      <button class="nav-btn" id="next-btn" onclick="nextSlide()">
+        Next →
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    function updateSlide() {
+      slides.forEach((s, i) => {
+        s.classList.toggle('active', i === currentSlide);
+      });
+      dots.forEach((d, i) => {
+        d.classList.toggle('active', i === currentSlide);
+      });
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === slides.length - 1;
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function goToSlide(idx) {
+      currentSlide = idx;
+      updateSlide();
+    }
+
+    // Keyboard navigation (Arrow keys)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+  </script>
+</body>
+</html>

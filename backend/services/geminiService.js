@@ -1,77 +1,102 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { detectLanguage, SUPPORTED_LANGUAGES } = require('./translatorService');
 
 /**
- * AI Invoice Extraction Service
- * Extracts structured invoice data from natural language input using Gemini AI
- * Features a smart regex/heuristic fallback if API key is not configured or offline.
+ * Multilingual AI Invoice Extraction Service
+ * Extracts structured invoice data from natural language in ANY language (Hindi, Bengali, Tamil, Telugu, Hinglish, etc.)
+ * Powered by Gemini AI with high-resilience Indic heuristic fallback engine.
  */
 
-// Heuristic fallback parser
-function heuristicParse(text) {
-  // Extract client name
+function normalizeIndicNumerals(str) {
+  if (!str) return '';
+  const indicDigits = {
+    '०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9',
+    '০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9',
+    '౦':'0','౧':'1','౨':'2','౩':'3','౪':'4','౫':'5','౬':'6','౭':'7','౮':'8','౯':'9',
+    '௦':'0','௧':'1','௨':'2','௩':'3','௪':'4','௫':'5','௬':'6','௭':'7','௮':'8','௯':'9'
+  };
+  return str.replace(/[०-९০-৯౦-౯௦-௯]/g, d => indicDigits[d] || d);
+}
+
+// Multilingual Indic Heuristic Fallback Parser
+function heuristicParse(rawText) {
+  const text = normalizeIndicNumerals(rawText);
+  const detectedLangCode = detectLanguage(rawText);
+  const languageName = SUPPORTED_LANGUAGES[detectedLangCode] || 'English';
+
+  // 1. Extract Client Name (English & Indic particles)
   let clientName = '';
-  const clientMatch = text.match(/(?:for|to|client|customer)\s+([A-Z][a-z]+(?:'[s]*)?(?:\s+[A-Z][a-z]+)?)/i) ||
-                      text.match(/^([A-Z][a-z]+(?:'[s]*)?)\s+/i);
+  const clientMatch = 
+    text.match(/(?:for|to|client|customer|ka|ke liye|ki|er|ku|na|kosam)\s+([A-Za-z\u0900-\u0D7F]+)/i) ||
+    text.match(/^([A-Za-z\u0900-\u0D7F]+)(?:'s|'|s|\s+ka|\s+er|\s+ku|\s+ki|\s+का|\s+এর|\s+க்கு)?\s+/i) ||
+    text.match(/([A-Za-z\u0900-\u0D7F]+)\s+(?:का|के लिए|এর|க்கு|కోసం)/i);
+
   if (clientMatch) {
-    clientName = clientMatch[1].replace(/'s$/i, '').trim();
+    clientName = clientMatch[1].replace(/('s|'|s|এর|का|க்கு)$/i, '').trim();
   }
 
-  // Extract due days
+  // 2. Extract Due Days (e.g., "7 days", "7 din", "7 दिन", "৭ দিন", "7 natkal")
   let dueInDays = 7;
-  const dueMatch = text.match(/(?:due\s+in|within)\s+(\d+)\s*days?/i) ||
-                   text.match(/(\d+)\s*days?\s+due/i);
-  if (dueMatch) {
-    dueInDays = parseInt(dueMatch[1], 10);
+  const dueMatch = 
+    text.match(/(?:due\s+in|within|din\s+me|din\s+mein|diner\s+moddhe|natkalil)\s*(\d+)/i) ||
+    text.match(/(\d+)\s*(?:days?|din|dino|diner|दिन|நாட்கள்|రోజులు)\s*(?:में|moddhe|il|due|payment)?/i);
+  if (dueMatch && !isNaN(parseInt(dueMatch[1], 10))) {
+    const d = parseInt(dueMatch[1], 10);
+    if (d >= 1 && d <= 90) dueInDays = d;
   }
 
-  // Extract items and rates
-  const items = [];
-  // Match patterns like "repaired AC for 2500", "filter for 600", "10 sessions at 500 each"
-  const itemPatterns = [
-    /([\w\s&]+?)\s+(?:for|at|costing|price)\s+(?:₹|INR|Rs\.?)\s*(\d+(?:,\d+)*(?:\.\d+)?)/gi,
-    /(?:₹|INR|Rs\.?)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s+(?:for|towards)\s+([\w\s&]+)/gi,
-    /(\d+)\s+([\w\s&]+?)\s+(?:for|at|@)\s+(?:₹|INR|Rs\.?)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:each|per)?/gi
-  ];
+  // Remove payment due phrases and days from item processing so days aren't mistaken for rates
+  const cleanItemText = text
+    .replace(/\d+\s*(?:days?|din|dino|diner|दिन|நாட்கள்|రోజులు)\s*(?:में|moddhe|il|due|payment|mein)?/gi, '')
+    .replace(/(?:payment\s+due|due\s+in|पेमेंट\s+देना\s+है|पेमेंट\s+देना|पেমেন্ট|payment|देना\s+है)/gi, '');
 
-  // Try matching multiple items split by 'and', 'also', commas, periods
-  const parts = text.split(/(?:and|,|also|\.)(?![0-9])/i);
+  // 3. Extract Items and Rates
+  const items = [];
+  // Split by English and Vernacular conjunctions
+  const parts = cleanItemText.split(/(?:and|aur|also|\+|r|ebong|ebang|matrum|mariyu|tatha|aur\s+bhi|evam|এবং|மற்றும்|మరియు|तथा|और|,|\.)(?![0-9])/i);
+
   for (const part of parts) {
     const trimmed = part.trim();
     if (!trimmed) continue;
 
-    // Check qty * rate pattern: "10 sessions at ₹500 each" or "3 blouses for ₹350 each"
-    const qtyRateMatch = trimmed.match(/(\d+)\s+([a-zA-Z\s]+?)\s+(?:at|for|@)\s*(?:₹|INR|Rs\.?)?\s*(\d+)/i);
-    if (qtyRateMatch) {
-      const qty = parseInt(qtyRateMatch[1], 10);
-      const desc = qtyRateMatch[2].trim();
-      const rate = parseFloat(qtyRateMatch[3]);
-      if (desc && rate) {
+    // Check quantity * rate pattern: e.g. "10 sessions at 500", "3 blouses at 350", "১০ টি ক্লাস ৫০০ টাকা"
+    const qtyMatch = trimmed.match(/(\d+)\s*([A-Za-z\u0900-\u0D7F\s&'-]+?)\s*(?:at|for|@|prati|each|har|dar|টাকা|₹|Rs\.?|INR)?\s*(?:₹|INR|Rs\.?|रुपये|টাকা|ரூபாய்)?\s*(\d+(?:,\d+)*(?:\.\d+)?)/i);
+    if (qtyMatch) {
+      const qty = parseInt(qtyMatch[1], 10);
+      const desc = qtyMatch[2].replace(/^(of|for|ka|ki|er|to|টি|टा|ti)\s+/i, '').trim();
+      const rate = parseFloat(qtyMatch[3].replace(/,/g, ''));
+      if (desc && rate && desc.length > 1 && !desc.match(/^(din|days|payment|diner)/i)) {
         items.push({ description: desc, quantity: qty, rate });
         continue;
       }
     }
 
-    // Check standard "repaired X for 2500"
-    const standardMatch = trimmed.match(/([a-zA-Z\s&'-]+?)\s+(?:for|costing|at)\s*(?:₹|INR|Rs\.?)?\s*(\d+)/i);
-    if (standardMatch) {
-      let desc = standardMatch[1].replace(/^(repaired|installed|serviced|made|fixed|bought|replaced)\s+/i, (m) => m).trim();
-      // clean client name from desc if present
+    // Standard rate extraction: e.g. "repaired AC for 2500", "AC repair kiya 2500 me", "फिल्टर बदला 600", "ফিল্টার পরিবর্তন ৬০০"
+    const numMatch = trimmed.match(/(\d+(?:,\d+)*(?:\.\d+)?)/);
+
+    if (numMatch) {
+      const rate = parseFloat(numMatch[1].replace(/,/g, ''));
+      let desc = trimmed
+        .replace(numMatch[0], '')
+        .replace(/(₹|INR|Rs\.?|रुपये|টাকা|ரூபாய்|for|costing|at|@|me|mein|taka|rupaye|kiya|badla|lagaya|karechi|panniyachi|payment|due|in\s+\d+\s+days?)/gi, '')
+        .trim();
+
       if (clientName) {
-        desc = desc.replace(new RegExp(`${clientName}'?s?\\s*`, 'i'), '').trim();
+        desc = desc.replace(new RegExp(`^${clientName}('s|s|\\s+का|\\s+er)?\\s*`, 'i'), '').trim();
       }
-      const rate = parseFloat(standardMatch[2]);
-      if (desc && rate && !desc.toLowerCase().includes('payment due')) {
+
+      if (desc && rate && rate > 0 && desc.length > 1 && !desc.match(/^(din|days|payment)/i)) {
         items.push({ description: desc, quantity: 1, rate });
       }
     }
   }
 
-  // If no items extracted, fallback to entire string as single service with any detected amount
+  // Fallback if no items isolated
   if (items.length === 0) {
-    const amountMatch = text.match(/(?:₹|INR|Rs\.?)\s*(\d+)/i) || text.match(/(\d+)\s*(?:₹|INR|Rs\.?)/i);
-    const amount = amountMatch ? parseFloat(amountMatch[1]) : 1000;
+    const singleAmtMatch = text.match(/(?:₹|INR|Rs\.?|रुपये|টাকা|ரூபாய்)?\s*(\d+)/i);
+    const amount = singleAmtMatch ? parseFloat(singleAmtMatch[1]) : 1000;
     items.push({
-      description: text.slice(0, 50).trim() || 'General Service',
+      description: text.slice(0, 50).trim() || 'Service Rendered',
       quantity: 1,
       rate: amount
     });
@@ -83,16 +108,21 @@ function heuristicParse(text) {
     clientPhone: '',
     items,
     dueInDays,
-    notes: text,
-    taxRate: 0
+    notes: rawText,
+    taxRate: 0,
+    detectedLanguage: detectedLangCode,
+    languageName: languageName,
+    source: 'multilingual_heuristic_parser'
   };
 }
 
 const extractInvoiceFromText = async (naturalLanguageText) => {
   const apiKey = process.env.GEMINI_API_KEY;
+  const detectedLang = detectLanguage(naturalLanguageText);
+  const langName = SUPPORTED_LANGUAGES[detectedLang] || 'English / Hinglish';
 
   if (!apiKey || apiKey === 'your_gemini_api_key_here' || apiKey.trim() === '') {
-    console.log('💡 Using built-in NLP heuristic extractor (Configure GEMINI_API_KEY for Gemini AI)');
+    console.log(`💡 Parsing with Multilingual Vernacular Heuristic Engine [Language: ${langName}]`);
     return {
       success: true,
       data: heuristicParse(naturalLanguageText)
@@ -103,34 +133,37 @@ const extractInvoiceFromText = async (naturalLanguageText) => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const prompt = `You are an invoice data extraction assistant. Extract structured invoice data from the following natural language text.
+    const prompt = `You are an expert multilingual invoice extraction and translation assistant for Indian gig workers and freelancers.
+The input text may be in English, Hindi, Bengali, Tamil, Telugu, Kannada, Marathi, Gujarati, Malayalam, Punjabi, Hinglish, or any regional Indian dialect.
 
-Text: "${naturalLanguageText}"
+Input Text: "${naturalLanguageText}"
 
-Return a JSON object with this exact structure:
+TASK:
+1. Understand the language (detected as likely ${langName}).
+2. Extract the Client Name (translate to English alphabet e.g. "Rahul", "Priya", "Meena", etc.).
+3. Extract all Line Items / Services. Provide clean, professional English descriptions (with native script in parentheses if applicable e.g. "AC Servicing & Filter Replacement (एसी मरम्मत)").
+4. Extract quantities and numerical rates in INR (numeric only, no currency symbols).
+5. Extract payment due days (default to 7 if unspecified).
+6. Provide notes preserving original instructions or terms.
+
+RETURN STRICT JSON ONLY:
 {
-  "clientName": "extracted client name or empty string",
+  "clientName": "extracted client name (e.g. Rahul Sharma)",
   "clientEmail": "extracted email or empty string",
-  "clientPhone": "extracted phone or empty string",
+  "clientPhone": "extracted phone number or empty string",
   "items": [
     {
-      "description": "item description",
+      "description": "Professional item description in English",
       "quantity": 1,
-      "rate": 0
+      "rate": 2500
     }
   ],
-  "dueInDays": null or number of days until payment is due,
-  "notes": "any additional notes or special instructions",
-  "taxRate": 0 (extract if mentioned, otherwise 0)
-}
-
-Rules:
-- Extract ALL items/services mentioned
-- For quantities: use 1 if not specified
-- For rates: extract the price in INR (remove ₹ symbol)
-- dueInDays: extract if "payment due in X days" or similar is mentioned
-- Do not calculate totals - just extract raw item data
-- Return ONLY valid JSON, no markdown, no explanation`;
+  "dueInDays": 7,
+  "notes": "Original notes or payment instructions",
+  "taxRate": 0,
+  "detectedLanguage": "${detectedLang}",
+  "languageName": "${langName}"
+}`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -141,9 +174,8 @@ Rules:
 
     const extractedData = JSON.parse(text);
 
-    // Validate and sanitize the extracted data
     const sanitized = {
-      clientName: String(extractedData.clientName || '').trim(),
+      clientName: String(extractedData.clientName || 'Client').trim(),
       clientEmail: String(extractedData.clientEmail || '').trim(),
       clientPhone: String(extractedData.clientPhone || '').trim(),
       items: (extractedData.items || []).map(item => ({
@@ -152,13 +184,20 @@ Rules:
         rate: parseFloat(item.rate) || 0,
       })).filter(item => item.description),
       dueInDays: extractedData.dueInDays ? parseInt(extractedData.dueInDays, 10) : 7,
-      notes: String(extractedData.notes || '').trim(),
+      notes: String(extractedData.notes || naturalLanguageText).trim(),
       taxRate: parseFloat(extractedData.taxRate) || 0,
+      detectedLanguage: extractedData.detectedLanguage || detectedLang,
+      languageName: extractedData.languageName || langName,
+      source: 'gemini_multilingual_ai'
     };
+
+    if (sanitized.items.length === 0) {
+      sanitized.items = heuristicParse(naturalLanguageText).items;
+    }
 
     return { success: true, data: sanitized };
   } catch (error) {
-    console.warn('Gemini AI extraction error, falling back to heuristic parser:', error.message);
+    console.warn(`Gemini AI extraction error (${error.message}), using Multilingual Heuristic Engine.`);
     return {
       success: true,
       data: heuristicParse(naturalLanguageText)

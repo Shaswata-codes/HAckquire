@@ -4,7 +4,15 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, minlength: 6 },
+  password: { 
+    type: String, 
+    minlength: 6,
+    required: function() {
+      return !this.googleId;
+    }
+  },
+  googleId: { type: String, sparse: true },
+  avatar: { type: String, default: '' },
   businessName: { type: String, trim: true, default: '' },
   phone: { type: String, default: '' },
   address: { type: String, default: '' },
@@ -14,13 +22,14 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving
 userSchema.pre('save', async function() {
-  if (!this.isModified('password')) return;
+  if (!this.password || !this.isModified('password')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Compare password
 userSchema.methods.matchPassword = async function(enteredPassword) {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

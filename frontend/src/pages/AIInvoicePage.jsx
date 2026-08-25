@@ -2,15 +2,67 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Sparkles, Send, Plus, Trash2, Save, Download, ArrowLeft, Wand2, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  Sparkles, 
+  Send, 
+  Plus, 
+  Trash2, 
+  Save, 
+  Download, 
+  ArrowLeft, 
+  Wand2, 
+  ChevronDown, 
+  ChevronUp,
+  Globe,
+  Languages,
+  CheckCircle2
+} from 'lucide-react';
 import { formatCurrency, downloadInvoicePDF } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 
-const EXAMPLES = [
-  "Repaired Rahul's AC for ₹2500 and replaced the filter for ₹600. Payment due in 7 days.",
-  "Taught Priya mathematics for 10 sessions at ₹500 each. Also charged ₹800 for study material.",
-  "Tailored 3 blouses for Meena at ₹350 each. Payment due in 3 days.",
-  "Installed 2 ceiling fans at Suresh's house for ₹400 each. Also repaired exhaust fan for ₹350.",
+const MULTILINGUAL_EXAMPLES = [
+  {
+    lang: 'English',
+    label: 'English',
+    flag: '🇬🇧',
+    text: "Repaired Rahul's AC for ₹2500 and replaced the filter for ₹600. Payment due in 7 days."
+  },
+  {
+    lang: 'Hindi',
+    label: 'हिन्दी (Hindi)',
+    flag: '🇮🇳',
+    text: "राहुल का एसी रिपेयर किया ₹2500 में और फिल्टर बदला ₹600 में, 7 दिन में पेमेंट देना है।"
+  },
+  {
+    lang: 'Hinglish',
+    label: 'Hinglish',
+    flag: '🇮🇳',
+    text: "Priya ke liye 10 tuition classes liya 500 per class aur 800 study material ka. Due in 5 days."
+  },
+  {
+    lang: 'Bengali',
+    label: 'বাংলা (Bengali)',
+    flag: '🇮🇳',
+    text: "রাহুলের এসি মেরামত করেছি ২৫০০ টাকায় এবং ফিল্টার বদলেছি ৬০০ টাকায়, ৭ দিনের মধ্যে পেমেন্ট।"
+  },
+  {
+    lang: 'Tamil',
+    label: 'தமிழ் (Tamil)',
+    flag: '🇮🇳',
+    text: "ராகுலின் ஏசி பழுதுபார்க்கப்பட்டது ₹2500 மற்றும் பில்டர் மாற்றப்பட்டது ₹600, 7 நாட்களில் செலுத்த வேண்டும்."
+  },
+  {
+    lang: 'Marathi',
+    label: 'मराठी (Marathi)',
+    flag: '🇮🇳',
+    text: "राहुलचे एसी दुरुस्त केले ₹२५०० आणि फिल्टर बदलले ₹६००, ७ दिवसांत पेमेंट."
+  },
+  {
+    lang: 'Gujarati',
+    label: 'ગુજરાતી (Gujarati)',
+    flag: '🇮🇳',
+    text: "રમેશભાઈના ઘરનું એસી રિપેર કર્યું ₹૨૫૦૦ અને ફિલ્ટર બદલ્યું ₹૬૦૦, ૭ દિવસમાં ચુકવણી."
+  }
 ];
 
 function ItemRow({ item, index, onChange, onDelete, isOnly }) {
@@ -111,8 +163,11 @@ export default function AIInvoicePage() {
   const [text, setText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [translatingNotes, setTranslatingNotes] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
+  const [detectedLang, setDetectedLang] = useState(null);
+  const [targetLang, setTargetLang] = useState('hi');
 
   const [form, setForm] = useState({
     clientName: '', clientEmail: '', clientPhone: '', clientAddress: '',
@@ -130,11 +185,13 @@ export default function AIInvoicePage() {
   const { subtotal, taxAmount, total } = calcTotals(form.items, form.taxRate, form.discount);
 
   const handleAIExtract = async () => {
-    if (!text.trim()) return toast.error('Please enter a description of your work');
+    if (!text.trim()) return toast.error('Please enter a description of your work in any language');
     setAiLoading(true);
     try {
       const { data } = await api.post('/ai/invoice', { text });
       const extracted = data.data;
+
+      setDetectedLang(extracted.languageName || extracted.detectedLanguage || 'Regional Language');
 
       setForm(prev => ({
         ...prev,
@@ -150,11 +207,30 @@ export default function AIInvoicePage() {
       }));
 
       setShowForm(true);
-      toast.success('✨ AI extracted invoice data! Review and edit below.');
+      toast.success(`✨ Extracted from ${extracted.languageName || 'natural language'}! Review and edit below.`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'AI extraction failed. Try again.');
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleTranslateNotes = async (langCode) => {
+    if (!form.notes) return toast.error('Add some notes first to translate');
+    setTranslatingNotes(true);
+    try {
+      const { data } = await api.post('/ai/translate', {
+        text: form.notes,
+        target_language: langCode || targetLang
+      });
+      if (data.translated_text) {
+        setForm(prev => ({ ...prev, notes: data.translated_text }));
+        toast.success(`Translated notes into ${data.target_language_name}! 🌐`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Translation failed');
+    } finally {
+      setTranslatingNotes(false);
     }
   };
 
@@ -212,9 +288,28 @@ export default function AIInvoicePage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2 text-white">
             <Sparkles size={22} className="text-indigo-400 flex-shrink-0" />
-            AI Invoice Generator
+            AI Multilingual Invoice Generator
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Describe your work in plain words — AI does the rest</p>
+          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
+            Type or speak in <strong className="text-indigo-300">Hindi, Bengali, Tamil, Telugu, Hinglish or any language</strong> — AI creates the invoice instantly!
+          </p>
+        </div>
+      </div>
+
+      {/* Multilingual Support Banner */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs">
+        <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+          <Globe size={15} className="text-indigo-400 animate-pulse" />
+          <span>Vernacular Indian Languages Supported:</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-300">
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">हिन्दी (Hindi)</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">বাংলা (Bengali)</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">தமிழ் (Tamil)</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">తెలుగు (Telugu)</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">हिंग्लिश (Hinglish)</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">मराठी (Marathi)</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-900/60 border border-slate-700">English</span>
         </div>
       </div>
 
@@ -226,13 +321,20 @@ export default function AIInvoicePage() {
             <Wand2 size={16} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <label className="block text-xs sm:text-sm font-bold text-indigo-200 mb-1.5">
-              Describe your work in natural language
-            </label>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <label className="block text-xs sm:text-sm font-bold text-indigo-200">
+                Describe your work in any language (English, Hindi, Bengali, Tamil, Hinglish...)
+              </label>
+              {detectedLang && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 size={12} /> Detected: {detectedLang}
+                </span>
+              )}
+            </div>
             <textarea
               id="ai-text-input"
               className="ai-textarea min-h-[90px] text-sm sm:text-base"
-              placeholder="e.g. Repaired Rahul's AC for ₹2500 and replaced the filter for ₹600. Payment due in 7 days."
+              placeholder="e.g. राहुल का एसी रिपेयर किया ₹2500 में और फिल्टर बदला ₹600 में। 7 दिन में पेमेंट देना है।"
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
@@ -247,7 +349,7 @@ export default function AIInvoicePage() {
             className="text-xs text-slate-400 hover:text-indigo-300 flex items-center gap-1 transition-colors cursor-pointer py-1"
           >
             {showExamples ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            {showExamples ? 'Hide examples' : 'Try sample prompts'}
+            {showExamples ? 'Hide regional sample prompts' : 'Try regional language examples (हिन्दी, বাংলা, தமிழ், Hinglish)'}
           </button>
           <button
             id="ai-extract-btn"
@@ -256,27 +358,35 @@ export default function AIInvoicePage() {
             className="btn-primary w-full sm:w-auto"
           >
             {aiLoading ? (
-              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Extracting Data...</>
+              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Translating & Extracting...</>
             ) : (
-              <><Sparkles size={16} />Extract with AI</>
+              <><Sparkles size={16} />Extract with Multilingual AI</>
             )}
           </button>
         </div>
 
-        {/* Examples */}
+        {/* Multilingual Examples */}
         {showExamples && (
-          <div className="mt-4 space-y-2 pt-4 border-t border-indigo-500/20">
-            <p className="text-xs text-slate-400 mb-2 font-medium">Click any example to fill the prompt:</p>
-            {EXAMPLES.map((ex, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => { setText(ex); setShowExamples(false); }}
-                className="w-full text-left text-xs sm:text-sm p-2.5 sm:p-3 rounded-xl transition-all hover:bg-indigo-500/15 bg-white/[0.03] border border-white/[0.06] text-slate-300 hover:text-white cursor-pointer"
-              >
-                "{ex}"
-              </button>
-            ))}
+          <div className="mt-4 space-y-2 pt-4 border-t border-indigo-500/20 animate-fade-in-up">
+            <p className="text-xs text-slate-400 mb-2 font-medium">Click any language example to fill the prompt:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {MULTILINGUAL_EXAMPLES.map((ex, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { setText(ex.text); setShowExamples(false); }}
+                  className="text-left text-xs p-3 rounded-xl transition-all hover:bg-indigo-500/15 bg-white/[0.03] border border-white/[0.06] text-slate-300 hover:text-white cursor-pointer group"
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-indigo-300 text-[11px] mb-1">
+                    <span>{ex.flag}</span>
+                    <span>{ex.label}</span>
+                  </div>
+                  <div className="line-clamp-2 text-slate-400 group-hover:text-slate-200">
+                    "{ex.text}"
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -370,7 +480,34 @@ export default function AIInvoicePage() {
                     onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs text-slate-300 mb-1">Notes / Terms</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs text-slate-300">Notes / Payment Terms</label>
+                    <div className="flex items-center gap-1.5">
+                      <select 
+                        className="bg-slate-900 text-slate-300 text-[11px] py-0.5 px-1.5 rounded border border-slate-700"
+                        value={targetLang}
+                        onChange={(e) => setTargetLang(e.target.value)}
+                      >
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="mr">मराठी (Marathi)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleTranslateNotes(targetLang)}
+                        disabled={translatingNotes}
+                        className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 cursor-pointer"
+                        title="Translate notes into regional language"
+                      >
+                        <Languages size={12} />
+                        {translatingNotes ? 'Translating...' : 'Translate Notes'}
+                      </button>
+                    </div>
+                  </div>
                   <textarea className="input-dark" rows={2} placeholder="Additional notes or payment instructions..."
                     value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
                 </div>

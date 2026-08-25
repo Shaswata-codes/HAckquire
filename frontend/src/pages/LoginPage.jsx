@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
+import GoogleLoginButton from '../components/auth/GoogleLoginButton';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -48,15 +49,18 @@ export default function LoginPage() {
         </div>
 
         <div className="glass-card p-6 sm:p-8">
-          {/* Demo shortcut banner */}
-          <button
-            type="button"
-            onClick={fillDemo}
-            className="w-full mb-5 p-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/25 transition-all cursor-pointer"
-          >
-            <Sparkles size={14} className="text-indigo-400 flex-shrink-0" />
-            <span>Click to fill Demo Account</span>
-          </button>
+          {/* Google Sign-in */}
+          {/* Google Sign-in with increased height and generous spacing */}
+<div className="mb-8 w-full [&>button]:!h-13 [&>button]:!py-3.5 [&>button]:!text-sm [&>button]:!w-full [&>button]:!flex [&>button]:!items-center [&>button]:!justify-center [&>div]:!w-full">
+  <GoogleLoginButton text="Continue with Google" mode="signin" />
+</div>
+
+          <div className="relative flex items-center justify-center mb-5">
+            <div className="border-t border-slate-700/80 w-full"></div>
+            <span className="bg-slate-900/90 px-3 text-[11px] font-semibold tracking-wider text-slate-500 uppercase absolute">
+              Or with email
+            </span>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

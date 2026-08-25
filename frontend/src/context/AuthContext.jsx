@@ -32,6 +32,14 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const googleLogin = async (payload) => {
+    const { data } = await api.post('/auth/google', payload);
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data));
+    setUser(data);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -45,7 +53,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, googleLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

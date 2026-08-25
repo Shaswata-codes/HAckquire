@@ -26,6 +26,7 @@ const register = async (req, res) => {
     name: user.name,
     email: user.email,
     businessName: user.businessName,
+    avatar: user.avatar,
     token: generateToken(user._id),
   });
 };
@@ -47,10 +48,77 @@ const login = async (req, res) => {
       name: user.name,
       email: user.email,
       businessName: user.businessName,
+      avatar: user.avatar,
       token: generateToken(user._id),
     });
   } else {
     res.status(401).json({ message: 'Invalid email or password' });
+  }
+};
+
+// @desc    Google OAuth Login / Sign-up
+// @route   POST /api/auth/google
+const googleAuth = async (req, res) => {
+  try {
+    const { credential, profile } = req.body;
+
+    let email, name, googleId, picture;
+
+    // 1. If Google ID Token credential is provided, verify with Google
+    if (credential) {
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+      if (!googleRes.ok) {
+        return res.status(401).json({ message: 'Invalid Google authentication token' });
+      }
+      const data = await googleRes.json();
+      email = data.email;
+      name = data.name || data.given_name || 'Google User';
+      googleId = data.sub;
+      picture = data.picture || '';
+    } else if (profile && profile.email) {
+      // Direct verified profile payload (fallback/dev mode)
+      email = profile.email;
+      name = profile.name || 'Google User';
+      googleId = profile.id || profile.sub || `google_${Date.now()}`;
+      picture = profile.picture || profile.avatar || '';
+    } else {
+      return res.status(400).json({ message: 'Missing Google authentication credentials' });
+    }
+
+    if (!email) {
+      return res.status(400).json({ message: 'Could not obtain email from Google account' });
+    }
+
+    // 2. Find or create user
+    let user = await User.findOne({ $or: [{ googleId }, { email: email.toLowerCase() }] });
+
+    if (user) {
+      // Update googleId and avatar if missing
+      if (!user.googleId) user.googleId = googleId;
+      if (picture && !user.avatar) user.avatar = picture;
+      await user.save();
+    } else {
+      // Create new user via Google
+      user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        googleId,
+        avatar: picture,
+        businessName: name,
+      });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      businessName: user.businessName,
+      avatar: user.avatar,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error('Google Auth Error:', error.message);
+    res.status(500).json({ message: 'Google authentication failed', error: error.message });
   }
 };
 
@@ -62,6 +130,7 @@ const getProfile = async (req, res) => {
     name: req.user.name,
     email: req.user.email,
     businessName: req.user.businessName,
+    avatar: req.user.avatar,
     phone: req.user.phone,
     address: req.user.address,
     gstNumber: req.user.gstNumber,
@@ -95,6 +164,7 @@ const updateProfile = async (req, res) => {
     name: updatedUser.name,
     email: updatedUser.email,
     businessName: updatedUser.businessName,
+    avatar: updatedUser.avatar,
     phone: updatedUser.phone,
     address: updatedUser.address,
     gstNumber: updatedUser.gstNumber,
@@ -103,4 +173,4 @@ const updateProfile = async (req, res) => {
   });
 };
 
-module.exports = { register, login, getProfile, updateProfile };
+module.exports = { register, login, googleAuth, getProfile, updateProfile };

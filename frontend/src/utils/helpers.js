@@ -1,3 +1,6 @@
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+
 // Format currency in INR
 export const formatCurrency = (amount, currency = 'INR') => {
   return new Intl.NumberFormat('en-IN', {
@@ -59,144 +62,172 @@ export const getSMSLink = (phone, invoiceNumber, amount, clientName) => {
   return `sms:${cleanPhone}?body=${body}`;
 };
 
-// Generate PDF invoice
+// Generate high-fidelity Unicode & Indic PDF invoice supporting all Indian languages
 export const downloadInvoicePDF = async (invoice, user) => {
-  const { jsPDF } = await import('jspdf');
-  
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pageW = 210;
-  const margin = 20;
-  let y = margin;
+  // Create an off-screen container with full Unicode & Indic font support
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.top = '-99999px';
+  container.style.left = '-99999px';
+  container.style.width = '794px'; // Standard A4 width at 96 DPI
+  container.style.minHeight = '1123px'; // Standard A4 height
+  container.style.backgroundColor = '#ffffff';
+  container.style.color = '#1e293b';
+  container.style.fontFamily = "'Inter', 'Segoe UI', 'Noto Sans', 'Noto Sans Bengali', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', sans-serif";
+  container.style.padding = '0';
+  container.style.boxSizing = 'border-box';
+  container.style.zIndex = '-9999';
 
-  // Header background
-  doc.setFillColor(99, 102, 241);
-  doc.rect(0, 0, pageW, 50, 'F');
+  const itemsHtml = (invoice.items || [])
+    .map((item, i) => `
+      <tr style="background-color: ${i % 2 === 1 ? '#f8fafc' : '#ffffff'}; border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 12px 16px; font-size: 13px; color: #1e293b; font-weight: 500;">
+          ${item.description || 'Service'}
+        </td>
+        <td style="padding: 12px 16px; font-size: 13px; color: #475569; text-align: center;">
+          ${item.quantity || 1}
+        </td>
+        <td style="padding: 12px 16px; font-size: 13px; color: #475569; text-align: right;">
+          ₹${(item.rate || 0).toLocaleString('en-IN')}
+        </td>
+        <td style="padding: 12px 16px; font-size: 13px; color: #0f172a; text-align: right; font-weight: 600;">
+          ₹${((item.quantity || 1) * (item.rate || 0)).toLocaleString('en-IN')}
+        </td>
+      </tr>
+    `)
+    .join('');
 
-  // Business name
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text(user?.businessName || 'Your Business', margin, 22);
+  container.innerHTML = `
+    <div style="background-color: #ffffff; min-height: 1123px; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <!-- Top Header Banner -->
+        <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #06b6d4 100%); color: #ffffff; padding: 36px 40px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold;">⚡</div>
+              <span style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">${user?.businessName || user?.name || 'Hackquire'}</span>
+            </div>
+            <div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">${user?.email || 'Verified Invoice'}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; opacity: 0.9;">INVOICE</div>
+            <div style="font-size: 22px; font-weight: 800; margin-top: 2px; letter-spacing: -0.5px;">#${invoice.invoiceNumber || 'INV-001'}</div>
+            <div style="font-size: 11px; opacity: 0.85; margin-top: 6px;">Issue Date: ${formatDate(invoice.issueDate || new Date())}</div>
+            <div style="font-size: 11px; opacity: 0.85;">Due Date: ${formatDate(invoice.dueDate)}</div>
+          </div>
+        </div>
 
-  // Invoice label
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text('INVOICE', pageW - margin, 16, { align: 'right' });
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text(invoice.invoiceNumber, pageW - margin, 26, { align: 'right' });
+        <!-- Bill To Section -->
+        <div style="padding: 32px 40px 20px 40px;">
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6366f1; margin-bottom: 6px;">
+            BILL TO
+          </div>
+          <div style="font-size: 18px; font-weight: 700; color: #0f172a;">
+            ${invoice.clientName || 'Valued Client'}
+          </div>
+          ${invoice.clientEmail ? `<div style="font-size: 13px; color: #64748b; margin-top: 3px;">📧 ${invoice.clientEmail}</div>` : ''}
+          ${invoice.clientPhone ? `<div style="font-size: 13px; color: #64748b; margin-top: 2px;">📞 ${invoice.clientPhone}</div>` : ''}
+          ${invoice.clientAddress ? `<div style="font-size: 13px; color: #64748b; margin-top: 2px;">📍 ${invoice.clientAddress}</div>` : ''}
+        </div>
 
-  // Dates
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Issue Date: ${formatDate(invoice.issueDate)}`, pageW - margin, 34, { align: 'right' });
-  doc.text(`Due Date: ${formatDate(invoice.dueDate)}`, pageW - margin, 40, { align: 'right' });
+        <!-- Items Table -->
+        <div style="padding: 0 40px;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <thead>
+              <tr style="background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 12px 16px; text-align: left;">Description</th>
+                <th style="padding: 12px 16px; text-align: center; width: 80px;">Qty</th>
+                <th style="padding: 12px 16px; text-align: right; width: 120px;">Rate</th>
+                <th style="padding: 12px 16px; text-align: right; width: 130px;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+        </div>
 
-  y = 65;
+        <!-- Totals & Notes Section -->
+        <div style="padding: 24px 40px; display: flex; justify-content: space-between; gap: 30px;">
+          <!-- Notes -->
+          <div style="flex: 1; max-width: 55%;">
+            ${invoice.notes ? `
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;">
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 6px;">
+                  NOTES / TERMS
+                </div>
+                <div style="font-size: 12px; color: #334155; line-height: 1.6; word-break: break-word;">
+                  ${invoice.notes}
+                </div>
+              </div>
+            ` : ''}
+          </div>
 
-  // Bill To
-  doc.setTextColor(50, 50, 80);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('BILL TO', margin, y);
-  y += 6;
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(30, 30, 60);
-  doc.setFontSize(12);
-  doc.text(invoice.clientName, margin, y);
-  y += 6;
-  doc.setFontSize(9);
-  if (invoice.clientEmail) { doc.text(invoice.clientEmail, margin, y); y += 5; }
-  if (invoice.clientPhone) { doc.text(invoice.clientPhone, margin, y); y += 5; }
-  if (invoice.clientAddress) { doc.text(invoice.clientAddress, margin, y); y += 5; }
+          <!-- Summary Box -->
+          <div style="width: 260px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-bottom: 8px;">
+              <span>Subtotal</span>
+              <span style="font-weight: 600; color: #1e293b;">₹${(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
+            </div>
+            ${invoice.taxRate > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-bottom: 8px;">
+                <span>Tax (${invoice.taxRate}%)</span>
+                <span style="font-weight: 600; color: #1e293b;">₹${(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+              </div>
+            ` : ''}
+            ${invoice.discount > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #10b981; margin-bottom: 8px;">
+                <span>Discount</span>
+                <span style="font-weight: 600;">-₹${(invoice.discount || 0).toLocaleString('en-IN')}</span>
+              </div>
+            ` : ''}
+            <div style="border-top: 2px solid #e2e8f0; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font-size: 15px; font-weight: 800; color: #0f172a;">Total</span>
+              <span style="font-size: 20px; font-weight: 800; color: #4f46e5;">₹${(invoice.total || 0).toLocaleString('en-IN')}</span>
+            </div>
+            ${invoice.amountPaid > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-size: 12px; color: #10b981; margin-top: 8px;">
+                <span>Amount Paid</span>
+                <span style="font-weight: 600;">₹${(invoice.amountPaid || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #ef4444; font-weight: 700; margin-top: 4px;">
+                <span>Amount Due</span>
+                <span>₹${(invoice.amountDue || 0).toLocaleString('en-IN')}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
 
-  y += 10;
+      <!-- Bottom Footer -->
+      <div style="padding: 20px 40px; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 11px; margin-top: 30px;">
+        Generated by <strong>Hackquire</strong> — AI-Powered Invoicing & Payment Reconciliation
+      </div>
+    </div>
+  `;
 
-  // Items table header
-  doc.setFillColor(240, 240, 255);
-  doc.rect(margin, y, pageW - 2 * margin, 10, 'F');
-  doc.setTextColor(50, 50, 100);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DESCRIPTION', margin + 3, y + 7);
-  doc.text('QTY', 130, y + 7, { align: 'center' });
-  doc.text('RATE', 155, y + 7, { align: 'center' });
-  doc.text('AMOUNT', pageW - margin - 3, y + 7, { align: 'right' });
-  y += 14;
+  document.body.appendChild(container);
 
-  // Items
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(40, 40, 70);
-  invoice.items.forEach((item, i) => {
-    if (i % 2 === 1) {
-      doc.setFillColor(248, 248, 255);
-      doc.rect(margin, y - 5, pageW - 2 * margin, 10, 'F');
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2, // 2x resolution for razor-sharp text
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${invoice.invoiceNumber || 'Invoice'}.pdf`);
+  } catch (error) {
+    console.error('PDF generation error:', error);
+  } finally {
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
     }
-    doc.text(item.description, margin + 3, y);
-    doc.text(String(item.quantity), 130, y, { align: 'center' });
-    doc.text(`₹${item.rate.toLocaleString('en-IN')}`, 155, y, { align: 'center' });
-    doc.text(`₹${item.amount.toLocaleString('en-IN')}`, pageW - margin - 3, y, { align: 'right' });
-    y += 10;
-  });
-
-  y += 5;
-
-  // Totals
-  const totalsX = 140;
-  doc.setDrawColor(230, 230, 240);
-  doc.line(totalsX, y, pageW - margin, y);
-  y += 8;
-
-  doc.setFontSize(10);
-  const addTotal = (label, value, bold = false) => {
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setTextColor(50, 50, 80);
-    doc.text(label, totalsX, y);
-    doc.text(`₹${value.toLocaleString('en-IN')}`, pageW - margin, y, { align: 'right' });
-    y += 8;
-  };
-
-  addTotal('Subtotal:', invoice.subtotal);
-  if (invoice.taxRate > 0) addTotal(`Tax (${invoice.taxRate}%):`, invoice.taxAmount);
-  if (invoice.discount > 0) addTotal('Discount:', -invoice.discount);
-
-  doc.setDrawColor(99, 102, 241);
-  doc.line(totalsX, y, pageW - margin, y);
-  y += 8;
-
-  doc.setFontSize(12);
-  doc.setTextColor(99, 102, 241);
-  addTotal('TOTAL:', invoice.total, true);
-
-  if (invoice.amountPaid > 0) {
-    doc.setTextColor(16, 185, 129);
-    addTotal('Amount Paid:', invoice.amountPaid);
-    doc.setTextColor(239, 68, 68);
-    addTotal('Amount Due:', invoice.amountDue, true);
   }
-
-  // Notes
-  if (invoice.notes) {
-    y += 10;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(50, 50, 80);
-    doc.text('NOTES:', margin, y);
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 100);
-    const lines = doc.splitTextToSize(invoice.notes, pageW - 2 * margin);
-    doc.text(lines, margin, y);
-    y += lines.length * 5;
-  }
-
-  // Footer
-  doc.setFillColor(99, 102, 241);
-  doc.rect(0, 280, pageW, 17, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Generated by Hackquire — AI-Powered Invoicing', pageW / 2, 290, { align: 'center' });
-
-  doc.save(`${invoice.invoiceNumber}.pdf`);
 };
